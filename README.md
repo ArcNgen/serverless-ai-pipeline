@@ -35,7 +35,17 @@ This project uses an API-driven, event-based architecture:
 
 ## Setup and Deployment
 
-*(This section will be your guide as you build)*
+### Create DynamoDB database
+```bash
+# Create dynamodb table using cli
+aws dynamodb create-table 
+    --table-name AI-Assistant-Users 
+    --attribute-definitions AttributeName=UserID,AttributeType=S 
+    --key-schema AttributeName=UserID,KeyType=HASH 
+    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
+```
+(Note: The `--provisioned-throughput` values are for the standard billing model. You could also use on-demand capacity.)
+
 
 1.  **Configure a Phone Number:** Set up a number with a service like Twilio and configure its webhook to point to your future API Gateway URL.
 2.  **Create a DynamoDB Table:** Design and create a table to store to-do lists.
