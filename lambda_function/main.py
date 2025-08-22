@@ -86,10 +86,55 @@ def handle_todo_list(user_id, command):
     Manage the user's todo list in DynamoDB.
     """
     print(f"Handling todo command '{command}' for {user_id}")
-    # TODO:
-    # 1. Get the user's current list from DynamoDB using todo_table.get_item(). 
-    # 2. Parse the command (e.g. 'add buy milk', 'remove 2').
-    # 3. Modify the list object in your python code (add, remove item).
-    # 4. Save the updated list back to DynamoDB using todo_table.put_item().
-    # 5. Format a confirmation message (e.g. "Added 'buy milk' to your list").
-    return "Todo list feature is under construction."
+    
+    # 1. Get current todo list from DynamoDB
+    try:
+        response = todo_table.get_item(Key={'UserID': user_id})
+        # If user exists, get their list; otherwise, start with an empty list
+        todo_list = response.get('Item', {}).get('TodoList', [])
+    except Exception as e:
+        print(f"Error getting item from DynamoDB: {e}")
+        return "Sorry, I couldn't access your todo list right now."
+    
+    # 2. Parse the command and modify the list
+    parts = command.strip().split()
+    action = parts[0]
+    
+    response_message = ""
+    
+    if action in ['add', 'todo', '+']:
+        if len(parts) > 1:
+            item_to_add = " " . join(parts[1:])
+            todo_list.append(item_to_add)
+            response_message = f"Added '{item_to_add}' to your todo list."
+        else: 
+            response_message = "Please tell me what to add. For example: 'add buy milk'."
+            
+    elif action in ['list', 'show', 'ls']:
+        if todo_list:
+            # Format the list with numbers for easy removal
+            formatted_list = "\n".join([f"{i+1}. {item}" for i, item in enumerate(todo_list)])
+            response_message = f"Here's your todo list:\n{formatted_list}"
+        else:
+            response_message = "Your todo list is empty."
+    elif action in ['remove', 'delete', 'rm', '-']:
+        if len(parts) > 1 and parts[1].isdigit():
+            item_index = int(parts[1])-1
+            if 0 <= item_index < len(todo_list):
+                removed_item = todo_list.pop(item_index)
+                response_message = f"Removed '{removed_item}' from your todo list."
+            else:
+                response_message = "That's not a valid number on your list."
+        else:
+            response_message = "Please specify the number of the item to remove. For example: 'remove 2'."
+    else:
+        response_message = "I didn't understand that command. You can say 'add', 'list', or 'remove'."
+    
+    # 3. Save the update list back to DynamoDB
+    try:
+        todo_table.put_item(Item={'UserID': user_id, 'TodoList': todo_list})
+    except Exception as e:
+        print(f"Error updating item in DynamoDB: {e}")
+        return "Sorry, I couldn't update your todo list right now."
+    
+    return response_message
