@@ -49,8 +49,7 @@ def lambda_handler(event, context):
     else:
         response_message = handle_question(user_id, message_body)
         
-# --- Feature handlers ---
-
+# IMAGE HANDLER =========================================================================
 def handle_image_analysis(user_id, image_url):
     """
     Analyzes an image from a URL using Rekognition. 
@@ -67,19 +66,7 @@ def handle_image_analysis(user_id, image_url):
     # 3. Format the labels from the response into a friendly message.
     return "Image analysis freature is under construction."
 
-def handle_todo_list(user_id, command):
-    """ 
-    Manage the user's todo list in DynamoDB.
-    """
-    print(f"Handling todo command '{command}' for {user_id}")
-    # TODO:
-    # 1. Get the user's current list from DynamoDB using todo_table.get_item(). 
-    # 2. Parse the command (e.g. 'add buy milk', 'remove 2').
-    # 3. Modify the list object in your python code (add, remove item).
-    # 4. Save the updated list back to DynamoDB using todo_table.put_item().
-    # 5. Format a confirmation message (e.g. "Added 'buy milk' to your list").
-    return "Todo list feature is under construction."
-
+# QUESTION HANDLER =======================================================================
 def handle_question(user_id, question):
     """
     Answer a general question using Amazon Bedrock.
@@ -92,3 +79,17 @@ def handle_question(user_id, question):
     # 3. Parse the streaming response from Bedrock to get the answer text.
     # 4. Return the answer. 
     return "Q&A feature is under construction."
+
+# TODO LIST HANDLER ======================================================================
+def handle_todo_list(user_id, command):
+    """ 
+    Manage the user's todo list in DynamoDB.
+    """
+    print(f"Handling todo command '{command}' for {user_id}")
+    # TODO:
+    # 1. Get the user's current list from DynamoDB using todo_table.get_item(). 
+    # 2. Parse the command (e.g. 'add buy milk', 'remove 2').
+    # 3. Modify the list object in your python code (add, remove item).
+    # 4. Save the updated list back to DynamoDB using todo_table.put_item().
+    # 5. Format a confirmation message (e.g. "Added 'buy milk' to your list").
+    return "Todo list feature is under construction."
