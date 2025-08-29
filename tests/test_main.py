@@ -62,3 +62,42 @@ class TestTodoListHandler(unittest.TestCase):
         new_item = todo_table.get_item(Key={'UserID': new_user_id})['Item']
         self.assertEqual(len(new_item['TodoList']), 1)
         self.assertEqual(new_item['TodoList'][0], 'start a new list')
+        
+    def test_list_items(self):
+        """Tests the 'list' command."""
+        command = "list"
+        response = handle_todo_list(self.test_user_id, command)
+        
+        self.assertIn("1. buy milk", response)
+        self.assertIn("2. walk the dog", response)
+        
+    def test_remove_item(self):
+        """Tests removing an item by its number."""
+        command = "remove 2"
+        response = handle_todo_list(self.test_user_id, command)
+        
+        self.assertIn("Removed 'walk the dog'", response)
+        
+        # Verify the item was actually removed in DynamoDB
+        updated_item = todo_table.get_item(Key={'UserID': self.test_user_id})['Item']
+        self.assertEqual(len(updated_item['TodoList']), 1)
+        self.assertEqual(updated_item['TodoList'][0], 'buy milk')
+        # self.assertNotIn('buy milk', updated_item['TodoList'])
+        
+    def test_remove_invalid_number(self):
+        """Tests removing an item with an invalid number."""
+        command = "remove 99"
+        response = handle_todo_list(self.test_user_id, command)
+        
+        self.assertIn("not a valid number", response)
+        
+    def tearDown(self):
+        """
+        This method is called after each test.
+        It cleans up the mock table.
+        """
+        # Delete the mock table
+        self.dynamodb.Table('AI-Assistant-Users').delete()
+        
+if __name__ == '__main__':
+    unittest.main()
