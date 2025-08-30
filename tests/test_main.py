@@ -5,8 +5,8 @@ import sys
 from moto import mock_aws
 
 # This is a common trick to make sure the test file can find the lambda_function code
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from lambda_function import handle_todo_list, todo_table
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+from lambda_function.main import handle_todo_list, todo_table
 
 # The @mock_aws decorator intercepts any boto3 calls and redirects them to the mock environment
 @mock_aws
@@ -21,7 +21,7 @@ class TestTodoListHandler(unittest.TestCase):
         self.dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
         self.dynamodb.create_table(
             TableName='AI-Assistant-Users',
-            KeySchema=[{'Attribute': 'UserID', 'KeyType': 'HASH'}],
+            KeySchema=[{'AttributeName': 'UserID', 'KeyType': 'HASH'}],
             AttributeDefinitions=[{'AttributeName': 'UserID', 'AttributeType': 'S'}],
             ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
         )
@@ -46,7 +46,7 @@ class TestTodoListHandler(unittest.TestCase):
         self.assertIn("Added 'finish the project'", response)
         
         # Verify the item was actually added in DynamoDB
-        updated_item = todo_table.get_item(Key={'UserID', self.test_user_id})['item']
+        updated_item = todo_table.get_item(Key={'UserID': self.test_user_id})['Item']
         self.assertEqual(len(updated_item['TodoList']), 3)
         self.assertIn('finish the project', updated_item['TodoList'])
         
