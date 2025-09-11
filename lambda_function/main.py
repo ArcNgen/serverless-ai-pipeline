@@ -2,12 +2,13 @@ import boto3
 import os
 import json
 import re #using regular expressions for simple command parsing
+import requests
 
 # --- AWS Service clients ---
 # Initialize clients outside the handler for reuse
 dynamodb = boto3.resource('dynamodb')
 bedrock_runtime = boto3.client('bedrock-runtime')
-reckognition_client = boto3.client('rekognition')
+rekognition_client = boto3.client('rekognition')
 
 # --- Configuration ---
 # Load table name from Lambda environment variables
@@ -53,18 +54,37 @@ def lambda_handler(event, context):
 def handle_image_analysis(user_id, image_url):
     """
     Analyzes an image from a URL using Rekognition. 
-    NOTE: Rekognition doesn't work with URLs directly. This is a placeholder
-    for the logic you'll need to write to download the image first.
     """
     
     print(f"Handling image analysis for {user_id} from {image_url}")
-    # TODO:
-    # 1. Use a library like 'requests to download the image from image_url.
-    #    image_bytes = requests.get(image_url).content
-    # 2. Call Rekognition's detect_labels with the image bytes:
-    #    response = rekognition_client.detect_labels(Image={'Bytes': image_bytes})
-    # 3. Format the labels from the response into a friendly message.
-    return "Image analysis freature is under construction."
+    
+    try:
+        # 1. Use requests to download the image from the URL
+        response = requests.get(image_url, timeout=10)
+        response.raise_for_status() # Raises an exception for bad status codes
+        image_bytes = response.content
+        
+        # 2. Call Rekognition's detect_labels with the image bytes.
+        rekognition_response = rekognition_client.detect_labels(
+            Image={'Bytes': image_bytes},
+            MaxLabels=10,
+            MinConfidence=75
+        )
+        
+        # 3. Format the labels from the response into a friendly message.
+        labels = rekognition_response.get('Labels', [])
+        if not labels:
+            return "I couldn't detect any objects in the image."
+        
+        formatted_labels = [f"{label['name']} ({label['Confidence']:.1f}%)" for label in labels]
+        return "I see the following in the image:\n" + "\n".join(formatted_labels)
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading image: {e}")
+        return "Sorry, I couldn't download the image from the URL."
+    except Exception as e:
+        print(f"Error analyzing image with Rekognition: {e}")
+        return "Sorry, I had a problem analyzing the image."
 
 # QUESTION HANDLER =======================================================================
 def handle_question(user_id, question):
@@ -72,13 +92,39 @@ def handle_question(user_id, question):
     Answer a general question using Amazon Bedrock.
     """
     print(f"Handling question '{question}' for {user_id}")
-    # TODO:
-    # 1. Construct the prompt for the Bedrock model. 
-    #    (This varies by model, for Claude it's a JSON object).
-    # 2. Invoke the model using bedrock_runtime.invoke_model().
-    # 3. Parse the streaming response from Bedrock to get the answer text.
-    # 4. Return the answer. 
-    return "Q&A feature is under construction."
+
+    # 1. Construct the prompt for the Bedrock model.
+    #    This example is for Anthropic Claude 3 Sonnet.
+    prompt = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 1024,
+        "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": question}]
+            }
+        ]
+    }
+
+    try:
+        # 2. Invoke the model using bedrock_runtime.invoke_model().
+        response = bedrock_runtime.invoke_model(
+            body=json.dumps(prompt),
+            modelId=BEDROCK_MODEL_ID,
+            contentType='application/json',
+            accept='application/json'
+        )
+
+        # 3. Parse the streaming response from Bedrock to get the answer text.
+        response_body = json.loads(response['body'].read())
+        answer = response_body['content'][0]['text']
+
+        # 4. Return the answer.
+        return answer
+
+    except Exception as e:
+        print(f"Error invoking Bedrock model: {e}")
+        return "Sorry, I couldn't get an answer for you right now."
 
 # TODO LIST HANDLER ======================================================================
 def handle_todo_list(user_id, command):
