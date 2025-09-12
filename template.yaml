@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  A serverless application that uses AWS Lambda, API Gateway, DynamoDB, and Bedrock to create an SMS-based AI assistant
+Resources:
+  AICompanionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: lambda_function/
+      Handler: main.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref UsersTable
+          BEDROCK_MODEL_ID: anthropic.claude-3-sonnet-20240229-v1:0
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: post
+      Policies:
+        - DynamoDBCrudPolicy:
+          TableName: !Ref UsersTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+            Resource: "*"
+        - Statement:
+          - Effect: Allow
+            Action:
+              - rekognition:DetectLabels
+            Resource: "*"
+  UsersTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: UserID
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
