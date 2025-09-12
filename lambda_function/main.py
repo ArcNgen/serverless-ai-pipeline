@@ -76,7 +76,7 @@ def handle_image_analysis(user_id, image_url):
         if not labels:
             return "I couldn't detect any objects in the image."
         
-        formatted_labels = [f"{label['name']} ({label['Confidence']:.1f}%)" for label in labels]
+        formatted_labels = [f"{label['Name']} ({label['Confidence']:.1f}%)" for label in labels]
         return "I see the following in the image:\n" + "\n".join(formatted_labels)
         
     except requests.exceptions.RequestException as e:
