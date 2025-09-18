@@ -2,7 +2,42 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   A serverless application that uses AWS Lambda, API Gateway, DynamoDB, and Bedrock to create an SMS-based AI assistant
+
 Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FunctionExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt UsersTable.Arn
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - rekognition:DetectLabels
+                Resource: '*'
+
   AICompanionFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -11,6 +46,7 @@ Resources:
       Handler: main.lambda_handler
       Runtime: python3.12
       Timeout: 30
+      Role: !GetAtt LambdaExecutionRole.Arn # We now use the Role property
       Environment:
         Variables:
           DYNAMODB_TABLE_NAME: !Ref UsersTable
@@ -21,19 +57,7 @@ Resources:
           Properties:
             Path: /
             Method: post
-      Policies:
-        - DynamoDBCrudPolicy:
-          TableName: !Ref UsersTable
-        - Statement:
-          - Effect: Allow
-            Action:
-              - bedrock:InvokeModel
-            Resource: "*"
-        - Statement:
-          - Effect: Allow
-            Action:
-              - rekognition:DetectLabels
-            Resource: "*"
+
   UsersTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
