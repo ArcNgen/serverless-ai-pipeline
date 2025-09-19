@@ -2,3 +2,4 @@ __pycache__
 .venv
 .aws-sam/*
 twilio.txt
+LINKEDIN_ARTICLE.md
