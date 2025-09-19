@@ -51,15 +51,15 @@ def lambda_handler(event, context):
         response_message = handle_question(user_id, message_body)
         
     # --- Format the response for API Gateway ---
-    # Twilio expects a TwiML response, but for simple SMS replies
-    # just returning the text in the body with a 200 OK is sufficient.
-    # API Gateway needs a specific JSON structure.
+    # Twilio expects a TwiML response to control the reply.
+    
+    twiml_response = f"<Response><Message>{response_message}</Message></Response>"
     return {
         'statusCode': 200,
         'headers': {
             'Content-Type': 'text/xml'
         },
-        'body': str(response_message)
+        'body': twiml_response
     }
         
 # IMAGE HANDLER =========================================================================
