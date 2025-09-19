@@ -117,26 +117,32 @@ Your application is now fully configured! You can test it by sending an SMS or M
 
 ## Troubleshooting
 
-If your messages are not receiving replies, the two most important places to check are the Twilio logs and the Lambda function's CloudWatch logs.
+If you don't receive an SMS reply, follow these steps in order.
 
-### 1. Check Twilio Logs
+### Step 1: Check the Twilio Message Log
+
+This tells you if the connection from Twilio to your AWS application is working.
 
 1.  In the Twilio Console, go to **Monitor -> Logs -> Messaging**.
-2.  Click on the log for the incoming message.
-3.  Look at the **"Request Inspector"** to see the `HTTP Response` that Twilio received from your API Gateway.
-    *   **`502 Bad Gateway` or `5xx` errors:** This means your Lambda function is crashing. Proceed to check the CloudWatch logs.
-    *   **`Timeout` error:** This means the Lambda function took too long to respond (longer than Twilio's 15-second limit). This often happens on the first "cold start". Try sending the message again. If it persists, check the CloudWatch logs for performance issues.
+2.  Click on the log for the incoming message you sent.
+3.  Look for any error messages. Common issues include:
+    *   **`Timeout` error:** This means the Lambda function took too long to respond (longer than Twilio's 15-second limit). This often happens on the first "cold start". **Try sending the message again**, as the second attempt on a "warm" function is much faster.
+    *   **`502 Bad Gateway` error:** This means your Lambda function received the request but crashed. Proceed to Step 2.
+    *   **XML Schema Warning:** If you see a warning about invalid XML, it means your Lambda function is not returning a correctly formatted TwiML response. Ensure the `body` of your function's return statement looks like `<Response><Message>Your text here</Message></Response>`.
 
-### 2. Check AWS CloudWatch Logs
+### Step 2: Check the AWS CloudWatch Logs
 
-This is the best way to see errors from the Lambda function itself.
+This is the best way to see the live output and errors from the Lambda function itself.
 
 1.  In the AWS Console, navigate to **CloudWatch -> Logs -> Log groups**.
 2.  Find the log group for your function (e.g., `/aws/lambda/sms-ai-assistant-AICompanionFunction-...`).
 3.  Click on the most recent log stream.
-4.  Look for any errors or `Traceback` messages. A common initial error is an `AccessDeniedException` from Bedrock, which means you need to enable model access in the Bedrock console.
+4.  Look for any errors or `Traceback` messages. A common initial error is an **`AccessDeniedException`** from Bedrock. This means you must enable model access for your AWS account:
+    *   In the **Amazon Bedrock** console, go to **Model access** (at the bottom of the left menu).
+    *   Click **Manage model access**.
+    *   Check the box for **Anthropic** and submit the form with the use case details. You must wait for the status to become **"Access granted"**.
 
-### 3. Testing the Lambda Function Directly
+### Step 3: Test the Lambda Function Directly
 
 This test bypasses Twilio and API Gateway to confirm if your core AWS backend is working correctly.
 
@@ -144,38 +150,18 @@ This test bypasses Twilio and API Gateway to confirm if your core AWS backend is
 2.  Select the **"Test"** tab.
 3.  **Create a new test event:**
     *   **Event name:** `TwilioTest`
-    *   **Event JSON:** Delete the default content and paste in the following JSON, which simulates a request from Twilio.
-    ```json
-    {
-      "version": "2.0",
-      "routeKey": "$default",
-      "rawPath": "/",
-      "rawQueryString": "",
-      "headers": {},
-      "requestContext": {
-        "accountId": "123456789012",
-        "apiId": "yourapi",
-        "domainName": "yourapi.execute-api.us-east-1.amazonaws.com",
-        "domainPrefix": "yourapi",
-        "http": {
-          "method": "POST",
-          "path": "/",
-          "protocol": "HTTP/1.1",
-          "sourceIp": "127.0.0.1",
-          "userAgent": "TwilioProxy/1.1"
-        },
-        "requestId": "test-request-id",
-        "routeKey": "$default",
-        "stage": "$default",
-        "timeEpoch": 1674642600000
-      },
-      "body": "From=%2B15551234567&To=%2B15557654321&Body=What+is+the+capital+of+France%3F&NumMedia=0",
-      "isBase64Encoded": false
-    }
-    ```
+    *   **Event JSON:** Delete the default content and paste in the JSON provided in the "Running the Unit Tests" section below.
 4.  Click **Save**, then click the **Test** button.
-    *   **Success:** If the execution result is green and the response `body` contains the correct answer, your entire AWS backend is working perfectly. The issue is likely a timeout or a configuration problem between Twilio and API Gateway.
+    *   **Success:** If the execution result is green and the response `body` contains a valid TwiML string, your entire AWS backend is working perfectly.
     *   **Failure:** If the result is red, the function logs will show the exact error in your code or IAM permissions.
+
+### Important Note on Twilio Trial Accounts
+
+Twilio trial accounts have a key limitation for sending messages to the US due to carrier A2P 10DLC regulations. You may see a warning in your Twilio logs that says **"Message from an Unregistered Number"**.
+
+*   This means your backend is working correctly and successfully told Twilio to send a reply.
+*   However, the carrier blocked the final message because your trial number is not registered.
+*   **This is expected behavior.** For this project, you can confirm your application is working by checking the CloudWatch logs for a successful run, even if you don't receive the final SMS. To enable replies, you would need to upgrade your Twilio account and complete the A2P 10DLC registration process.
 
 ## Running the Unit Tests
 
